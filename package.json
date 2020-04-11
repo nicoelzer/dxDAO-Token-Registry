@@ -1,0 +1,26 @@
+{
+  "name": "tokenRegistry",
+  "version": "1.0.0",
+  "description": "",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@openzeppelin/cli": "^2.8.1",
+    "@openzeppelin/contracts": "^2.5.0",
+    "@truffle/hdwallet-provider": "^1.0.33",
+    "openzeppelin-solidity": "^2.5.0",
+    "truffle": "^5.1.21"
+  },
+  "devDependencies": {
+    "@openzeppelin/cli": "^2.5.3",
+    "@openzeppelin/contracts": "^2.4.0",
+    "verify-on-etherscan": "^1.2.1"
+  }
+}
