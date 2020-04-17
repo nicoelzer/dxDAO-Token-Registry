@@ -1,79 +1,108 @@
-pragma solidity 0.5.0;
+pragma solidity >=0.5.0;
 pragma experimental ABIEncoderV2;
 
-import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
+contract Ownable {
+  address private _owner;
 
-interface ERC20Interface {
-  function name() external view returns (string memory);
-  function symbol() external view returns (string memory);
-  function decimals() external view returns (uint8);
-  function balanceOf(address _owner) external view returns (uint256 balance);
+  event OwnershipTransferred(
+    address indexed previousOwner,
+    address indexed newOwner
+  );
+
+  /**
+   * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+   * account.
+   */
+  constructor() internal {
+    _owner = msg.sender;
+    emit OwnershipTransferred(address(0), _owner);
+  }
+
+  /**
+   * @return the address of the owner.
+   */
+  function owner() public view returns(address) {
+    return _owner;
+  }
+
+  /**
+   * @dev Throws if called by any account other than the owner.
+   */
+  modifier onlyOwner() {
+    require(isOwner());
+    _;
+  }
+
+  /**
+   * @return true if `msg.sender` is the owner of the contract.
+   */
+  function isOwner() public view returns(bool) {
+    return msg.sender == _owner;
+  }
+  
+  /**
+   * @dev Transfers ownership of the contract to a new account (`newOwner`).
+   * Can only be called by the current owner.
+   */
+  function transferOwnership(address newOwner) public onlyOwner {
+      _transferOwnership(newOwner);
+  }
+
+  /**
+   * @dev Transfers ownership of the contract to a new account (`newOwner`).
+   */
+  function _transferOwnership(address newOwner) internal {
+      require(newOwner != address(0), "Ownable: new owner is the zero address");
+      emit OwnershipTransferred(_owner, newOwner);
+      _owner = newOwner;
+  }
+
 }
 
-interface ERC20BytesInterface {
-  function name() external view returns (bytes32);
-  function symbol() external view returns (bytes32);
-  function decimals() external view returns (uint8);
-  function balanceOf(address _owner) external view returns (uint256 balance);
+contract ERC20Interface {
+  function name() public view returns (string memory);
+  function symbol() public view returns (string memory);
+  function decimals() public view returns (uint8);
+  function balanceOf(address _owner) public view returns (uint256 balance);
+}
+
+contract ERC20BadInterface {
+  function name() public view returns (bytes32);
+  function symbol() public view returns (bytes32);
+  function decimals() public view returns (uint8);
+  function balanceOf(address _owner) public view returns (uint256 balance);
 }
 
 contract omenTokenRegistry is Ownable{
 
-    /** @dev Mapping of tokens to status */
-    mapping (address => bool) public authorisedStatus;
-
-    /** @dev Array of authorised tokens */
-    address[] public authorisedTokens;
-    
-    /** @dev Event emitted when a new token was added */
     event AddNewToken(address newToken);
-    
-    /** @dev Event emitted when a token was removed */
     event RemoveToken(address token);
 
-    /** @dev Owner facing function used to add new token(s)
-      * @param _tokens address of token(s) to add
-      * Emits an {AddNewToken} event.
-      */
+    address[] public authorisedTokens;
+
     function addNewTokens(address[] memory _tokens) public onlyOwner {
         for (uint32 i = 0; i < _tokens.length; i++) {
-            authorisedStatus[_tokens[i]] = true;
             authorisedTokens.push(_tokens[i]);
             emit AddNewToken(_tokens[i]);
         }
     }
 
-    /** @dev Owner facing function used to remove token(s)
-      * @param _tokens address of token(s) to remove
-      * Emits an {RemoveToken} event.
-      */
-    function removeTokens(address[] memory _tokens) public onlyOwner {
-        for (uint32 i = 0; i < _tokens.length; i++) {
-            require(authorisedStatus[_tokens[i]] == true, "token already removed");
-            authorisedStatus[_tokens[i]] = false;
-            emit RemoveToken(_tokens[i]);
-        }
-    }
-
-    /** @dev Function that returns an array of active tokens.
-      * @return an array of active token addresses
-      */
-    function getAvailableTokens() public view returns(address[] memory tokens) {
-        tokens = new address[](authorisedTokens.length);
-
+    function removeToken(address _token) public onlyOwner {
         for (uint32 i = 0; i < authorisedTokens.length; i++) {
-            if (authorisedStatus[authorisedTokens[i]]) {
-                tokens[i] = authorisedTokens[i];
-            } else {
-                tokens[i] = address(0);
+
+            if(authorisedTokens[i] == _token) {
+              authorisedTokens[i] = authorisedTokens[authorisedTokens.length - 1];
+              delete authorisedTokens[authorisedTokens.length - 1];
+              authorisedTokens.length--;
+              emit RemoveToken(_token);
             }
         }
     }
 
-    /** @dev Function that takes byte32 and returns string value
-      * @param x value in bytes32
-      * @return value in string
-      */
+    function getAuthorisedTokens()public view returns(address [] memory){
+      return authorisedTokens;
+    }
+
     function bytes32ToString(bytes32 x) private pure returns (string memory) {
       bytes memory bytesString = new bytes(32);
       uint charCount = 0;
@@ -91,13 +120,9 @@ contract omenTokenRegistry is Ownable{
       return string(bytesStringTrimmed);
     }
 
-    /** @dev Function that return the Name for a given token
-      * @param tokenAddress address of the token to query
-      * @return string of the tokenName
-      */
     function getTokenName(address tokenAddress) private view returns (string memory){
       // check if bytes32 call returns correctly
-      string memory name = bytes32ToString(ERC20BytesInterface(tokenAddress).name());
+      string memory name = bytes32ToString(ERC20BadInterface(tokenAddress).name());
       bytes memory nameBytes = bytes(name);
       if(nameBytes.length <= 1){
         name = ERC20Interface(tokenAddress).name();
@@ -105,13 +130,9 @@ contract omenTokenRegistry is Ownable{
       return name;
     }
 
-    /** @dev Function that return the Symbol for a given token
-      * @param tokenAddress address of the token to query
-      * @return string of the tokenSymbol
-      */
     function getTokenSymbol(address tokenAddress) private view returns (string memory){
       // check if bytes32 call returns correctly
-      string memory symbol = bytes32ToString(ERC20BytesInterface(tokenAddress).symbol());
+      string memory symbol = bytes32ToString(ERC20BadInterface(tokenAddress).symbol());
       bytes memory symbolBytes = bytes(symbol);
       if(symbolBytes.length <= 1){
         symbol = ERC20Interface(tokenAddress).symbol();
@@ -119,10 +140,7 @@ contract omenTokenRegistry is Ownable{
       return symbol;
     }
 
-    /** @dev Function that return the Name, Symbol and Decimals for a given token(s)
-      * @param _tokens address of the token to query
-      * @return Array of the token name, symbol and decimals for queried token(s)
-      */
+    // get name, symbol and decimals for multiple tokens
     function getTokenData(address[] memory _tokens) public view returns (
       string[] memory names, string[] memory symbols, uint[] memory decimals
       ) {
@@ -134,6 +152,15 @@ contract omenTokenRegistry is Ownable{
         symbols[i] = getTokenSymbol(_tokens[i]);
         decimals[i] = ERC20Interface(_tokens[i]).decimals();
       }
+    }
+
+    // get external balance of multiple tokens
+    function getExternalBalances(address trader, address[] memory assetAddresses) public view returns (uint256[] memory) {
+        uint256[] memory balances = new uint256[](assetAddresses.length);
+        for (uint i = 0; i < assetAddresses.length; i++) {
+            balances[i] = ERC20Interface(assetAddresses[i]).balanceOf(trader);
+        }
+        return balances;
     }
 
 }
