@@ -78,29 +78,46 @@ contract omenTokenRegistry is Ownable{
     event AddNewToken(address newToken);
     event RemoveToken(address token);
 
-    address[] public authorisedTokens;
+    address[] public tokens;
+    mapping(address => uint) public tokenIndex;
+    uint public activeTokenCount;
+
+    constructor() public{
+      tokens.push(address(0));
+    }
 
     function addNewTokens(address[] memory _tokens) public onlyOwner {
-        for (uint32 i = 0; i < _tokens.length; i++) {
-            authorisedTokens.push(_tokens[i]);
-            emit AddNewToken(_tokens[i]);
-        }
+      for (uint32 i = 0; i < _tokens.length; i++) {
+        require(tokenIndex[_tokens[i]] == 0, 'Token already added');
+        tokens.push(_tokens[i]);
+        tokenIndex[_tokens[i]] = _tokens.length;
+        activeTokenCount++;
+        emit AddNewToken(_tokens[i]);
+      }
     }
 
-    function removeToken(address _token) public onlyOwner {
-        for (uint32 i = 0; i < authorisedTokens.length; i++) {
-
-            if(authorisedTokens[i] == _token) {
-              authorisedTokens[i] = authorisedTokens[authorisedTokens.length - 1];
-              delete authorisedTokens[authorisedTokens.length - 1];
-              authorisedTokens.length--;
-              emit RemoveToken(_token);
-            }
-        }
+    function removeTokens(address[] memory _tokens) public onlyOwner {
+      for (uint32 i = 0; i < _tokens.length; i++) {
+        require(tokenIndex[_tokens[i]] != 0, 'Only active tokens can be removed');
+        tokenIndex[_tokens[i]] = 0;
+        activeTokenCount--;
+        emit RemoveToken(_tokens[i]);
+      }
     }
 
-    function getAuthorisedTokens()public view returns(address [] memory){
-      return authorisedTokens;
+    function getTokens() public view returns(address[] memory activeTokens){
+      activeTokens = new address[](activeTokenCount);
+      uint32 activeCount = 0;
+      for (uint256 i = 0; i < tokens.length; i++) {
+        if (tokenIndex[tokens[i]] != 0) {
+            activeTokens[activeCount] = tokens[i];
+            activeCount++;
+        }
+      }
+    }
+
+    function activeToken(address _token) public view returns (bool) {
+      return tokenIndex[_token] != 0 ? true : false;
     }
 
     function bytes32ToString(bytes32 x) private pure returns (string memory) {
