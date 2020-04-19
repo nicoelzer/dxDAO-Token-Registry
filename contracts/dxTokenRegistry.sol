@@ -7,8 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract dxTokenRegistry is Ownable{
 
     event AddNewList(uint listId, string listName);
-    event AddNewToken(uint list, address newToken);
-    event RemoveToken(uint list, address token);
+    event AddNewToken(uint listId, address newToken);
+    event RemoveToken(uint listId, address token);
 
     struct tcr {
       uint listId;
