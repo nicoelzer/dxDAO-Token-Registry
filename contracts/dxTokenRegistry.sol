@@ -6,45 +6,53 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract dxTokenRegistry is Ownable{
 
-    event AddNewList(uint listId, string listName);
-    event AddNewToken(uint listId, address newToken);
+    event AddList(uint listId, string listName);
+    event AddToken(uint listId, address token);
     event RemoveToken(uint listId, address token);
+
+    enum TokenStatus {NULL,ACTIVE,REMOVED}
+    TokenStatus tokenStatus;
 
     struct tcr {
       uint listId;
       string listName;
       address[] tokens;
-      mapping(address => uint) tokenIndex;
+      mapping(address => TokenStatus) status;
       uint activeTokenCount;
     }
 
     mapping (uint => tcr) public tcrs;
     uint public listCount;
 
-    function addNewList(string memory _listName) public onlyOwner returns(uint) {
+    function addList(string memory _listName) public onlyOwner returns(uint) {
       listCount++;
       tcrs[listCount].listId =listCount;
       tcrs[listCount].listName =_listName;
       tcrs[listCount].tokens.push(address(0));
       tcrs[listCount].activeTokenCount = 0;
-      emit AddNewList(listCount,_listName);
+      emit AddList(listCount,_listName);
       return listCount;
     }
 
-    function addNewTokens(uint _listId, address[] memory _tokens) public onlyOwner {
+    function addTokens(uint _listId, address[] memory _tokens) public onlyOwner {
       for (uint32 i = 0; i < _tokens.length; i++) {
-        require(tcrs[_listId].tokenIndex[_tokens[i]] == 0, 'dxTokenRegistry : DUPLICATE_TOKEN');
-        tcrs[_listId].tokens.push(_tokens[i]);
-        tcrs[_listId].tokenIndex[_tokens[i]] = _tokens.length;
-        tcrs[_listId].activeTokenCount++;
-        emit AddNewToken(_listId, _tokens[i]);
+        require(tcrs[_listId].status[_tokens[i]] != TokenStatus.ACTIVE, 'dxTokenRegistry : DUPLICATE_TOKEN');
+        if(tcrs[_listId].status[_tokens[i]] == TokenStatus.REMOVED){
+          tcrs[_listId].status[_tokens[i]] = TokenStatus.ACTIVE;
+          tcrs[_listId].activeTokenCount++;
+        } else {
+          tcrs[_listId].tokens.push(_tokens[i]);
+          tcrs[_listId].status[_tokens[i]] = TokenStatus.ACTIVE;
+          tcrs[_listId].activeTokenCount++;
+        }
+        emit AddToken(_listId, _tokens[i]);
       }
     }
 
     function removeTokens(uint _listId, address[] memory _tokens) public onlyOwner {
       for (uint32 i = 0; i < _tokens.length; i++) {
-        require(tcrs[_listId].tokenIndex[_tokens[i]] != 0, 'dxTokenRegistry : INACTIVE_TOKEN');
-        tcrs[_listId].tokenIndex[_tokens[i]] = 0;
+        require(tcrs[_listId].status[_tokens[i]] == TokenStatus.ACTIVE, 'dxTokenRegistry : INACTIVE_TOKEN');
+        tcrs[_listId].status[_tokens[i]] = TokenStatus.REMOVED;
         tcrs[_listId].activeTokenCount--;
         emit RemoveToken(_listId, _tokens[i]);
       }
@@ -54,9 +62,9 @@ contract dxTokenRegistry is Ownable{
       activeTokens = new address[](tcrs[_listId].activeTokenCount);
       uint32 activeCount = 0;
       for (uint256 i = 0; i < tcrs[_listId].tokens.length; i++) {
-        if (tcrs[_listId].tokenIndex[tcrs[_listId].tokens[i]] != 0) {
-            activeTokens[activeCount] = tcrs[_listId].tokens[i];
-            activeCount++;
+        if (tcrs[_listId].status[tcrs[_listId].tokens[i]] == TokenStatus.ACTIVE) {
+          activeTokens[activeCount] = tcrs[_listId].tokens[i];
+          activeCount++;
         }
       }
     }
@@ -67,7 +75,7 @@ contract dxTokenRegistry is Ownable{
       tokensRange = new address[](_end - _start);
       uint32 activeCount = 0;
       for (uint256 i = _start; i < _end; i++) {
-         if (tcrs[_listId].tokenIndex[tcrs[_listId].tokens[i]] != 0) {
+         if (tcrs[_listId].status[tcrs[_listId].tokens[i]] != TokenStatus.REMOVED) {
            tokensRange[activeCount] = tcrs[_listId].tokens[i];
           } else {
             tokensRange[activeCount] = address(0);
@@ -77,7 +85,7 @@ contract dxTokenRegistry is Ownable{
     }
 
     function activeToken(uint _listId,address _token) public view returns (bool) {
-      return tcrs[_listId].tokenIndex[_token] != 0 ? true : false;
+      return tcrs[_listId].status[_token] == TokenStatus.ACTIVE ? true : false;
     }
 
     function getTokenData(address[] memory _tokens) public view returns (
