@@ -11,7 +11,6 @@ contract dxTokenRegistry is Ownable{
     event RemoveToken(uint listId, address token);
 
     enum TokenStatus {NULL,ACTIVE,REMOVED}
-    TokenStatus tokenStatus;
 
     struct tcr {
       uint listId;
