@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract dxTokenRegistry is Ownable{
+contract DXTokenRegistry is Ownable{
 
     event AddList(uint listId, string listName);
     event AddToken(uint listId, address token);
@@ -12,7 +12,7 @@ contract dxTokenRegistry is Ownable{
 
     enum TokenStatus {NULL,ACTIVE,REMOVED}
 
-    struct tcr {
+    struct TCR {
       uint listId;
       string listName;
       address[] tokens;
@@ -20,7 +20,7 @@ contract dxTokenRegistry is Ownable{
       uint activeTokenCount;
     }
 
-    mapping (uint => tcr) public tcrs;
+    mapping (uint => TCR) public tcrs;
     uint public listCount;
 
     function addList(string memory _listName) public onlyOwner returns(uint) {
@@ -57,7 +57,11 @@ contract dxTokenRegistry is Ownable{
       }
     }
 
-    function getTokens(uint _listId) public view returns(address[] memory activeTokens){
+    function getAllTokens(uint _listId) public view returns(address[] memory){
+      return tcrs[_listId].tokens;
+    }
+
+    function getActiveTokens(uint _listId) public view returns(address[] memory activeTokens){
       activeTokens = new address[](tcrs[_listId].activeTokenCount);
       uint32 activeCount = 0;
       for (uint256 i = 0; i < tcrs[_listId].tokens.length; i++) {
@@ -70,16 +74,13 @@ contract dxTokenRegistry is Ownable{
 
     function getTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
       require(_start <= tcrs[_listId].tokens.length && _end < tcrs[_listId].tokens.length, 'dxTokenRegistry: INVALID_RANGE');
-      _end += 1;
-      tokensRange = new address[](_end - _start);
+      tokensRange = new address[](_end - _start +1);
       uint32 activeCount = 0;
-      for (uint256 i = _start; i < _end; i++) {
-         if (tcrs[_listId].status[tcrs[_listId].tokens[i]] != TokenStatus.REMOVED) {
-           tokensRange[activeCount] = tcrs[_listId].tokens[i];
-          } else {
-            tokensRange[activeCount] = address(0);
-          }
-        activeCount++;
+      for (uint256 i = _start; i <= _end; i++) {
+         if (tcrs[_listId].status[tcrs[_listId].tokens[i]] == TokenStatus.ACTIVE) {
+          tokensRange[activeCount] = tcrs[_listId].tokens[i];
+          activeCount++;
+         }
       }
     }
 
