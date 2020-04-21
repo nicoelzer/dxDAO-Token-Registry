@@ -72,7 +72,7 @@ contract DXTokenRegistry is Ownable{
       }
     }
 
-    function getTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
+    function getActiveTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
       require(_start <= tcrs[_listId].tokens.length && _end < tcrs[_listId].tokens.length, 'dxTokenRegistry: INVALID_RANGE');
       tokensRange = new address[](_end - _start +1);
       uint32 activeCount = 0;
@@ -84,7 +84,7 @@ contract DXTokenRegistry is Ownable{
       }
     }
 
-    function activeToken(uint _listId,address _token) public view returns (bool) {
+    function isTokenActive(uint _listId,address _token) public view returns (bool) {
       return tcrs[_listId].status[_token] == TokenStatus.ACTIVE ? true : false;
     }
 
