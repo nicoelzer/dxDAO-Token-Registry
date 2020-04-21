@@ -4,6 +4,8 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+/// @title dxDAO Token Multi-Registry
+/// @notice Maintains multiple token lists, curated by the DAO
 contract DXTokenRegistry is Ownable{
 
     event AddList(uint listId, string listName);
@@ -23,6 +25,9 @@ contract DXTokenRegistry is Ownable{
     mapping (uint => TCR) public tcrs;
     uint public listCount;
 
+    /// @notice Add new token list.
+    /// @param _listName Name of new list.
+    /// @return New list ID.
     function addList(string memory _listName) public onlyOwner returns(uint) {
       listCount++;
       tcrs[listCount].listId =listCount;
@@ -33,6 +38,10 @@ contract DXTokenRegistry is Ownable{
       return listCount;
     }
 
+    /// @notice The owner can add new token(s) to existing list, by address.
+    /// @dev Attempting to add token addresses which are already in the list will cause revert.
+    /// @param _listId ID of list to add new tokens.
+    /// @param _tokens Array of token addresses to add.
     function addTokens(uint _listId, address[] memory _tokens) public onlyOwner {
       for (uint32 i = 0; i < _tokens.length; i++) {
         require(tcrs[_listId].status[_tokens[i]] != TokenStatus.ACTIVE, 'dxTokenRegistry : DUPLICATE_TOKEN');
@@ -46,8 +55,12 @@ contract DXTokenRegistry is Ownable{
         }
         emit AddToken(_listId, _tokens[i]);
       }
-    }
+    } 
 
+    /// @notice The owner can deactivate token(s) on existing list, by address.
+    /// @dev Attempting to deactivate token addresses which are not active, or not present in the list, will cause revert.
+    /// @param _listId ID of list to deactivate tokens from.
+    /// @param _tokens Array of token addresses to deactivate.
     function removeTokens(uint _listId, address[] memory _tokens) public onlyOwner {
       for (uint32 i = 0; i < _tokens.length; i++) {
         require(tcrs[_listId].status[_tokens[i]] == TokenStatus.ACTIVE, 'dxTokenRegistry : INACTIVE_TOKEN');
@@ -57,10 +70,16 @@ contract DXTokenRegistry is Ownable{
       }
     }
 
+    /// @notice Get all tokens tracked by a token list, both active and deactivated.
+    /// @param _listId ID of list to get tokens from.
+    /// @return Array of token addresses tracked by list.
     function getAllTokens(uint _listId) public view returns(address[] memory){
       return tcrs[_listId].tokens;
     }
 
+    /// @notice Get all active tokens in a token list.
+    /// @param _listId ID of list to get tokens from.
+    /// @return Array of active token addresses in list.
     function getActiveTokens(uint _listId) public view returns(address[] memory activeTokens){
       activeTokens = new address[](tcrs[_listId].activeTokenCount);
       uint32 activeCount = 0;
@@ -72,7 +91,12 @@ contract DXTokenRegistry is Ownable{
       }
     }
 
-    function getTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
+    /// @notice Get active tokens from a list, within a specified index range.
+    /// @param _listId ID of list to get tokens from.
+    /// @param _start Start index.
+    /// @param _end End index.
+    /// @return Array of active token addresses in index range.
+    function getActiveTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
       require(_start <= tcrs[_listId].tokens.length && _end < tcrs[_listId].tokens.length, 'dxTokenRegistry: INVALID_RANGE');
       tokensRange = new address[](_end - _start +1);
       uint32 activeCount = 0;
@@ -84,10 +108,17 @@ contract DXTokenRegistry is Ownable{
       }
     }
 
-    function activeToken(uint _listId,address _token) public view returns (bool) {
+    /// @notice Check if list has a given token address active.
+    /// @param _listId ID of list to get tokens from.
+    /// @param _token Token address to check.
+    /// @return Active status of given token address in list.
+    function isTokenActive(uint _listId,address _token) public view returns (bool) {
       return tcrs[_listId].status[_token] == TokenStatus.ACTIVE ? true : false;
     }
 
+    /// @notice Convenience method to get ERC20 metadata for given tokens.
+    /// @param _tokens Array of token addresses.
+    /// @return Name, symbol, and decimals for each token.
     function getTokenData(address[] memory _tokens) public view returns (
       string[] memory names, string[] memory symbols, uint[] memory decimals
       ) {
@@ -101,6 +132,10 @@ contract DXTokenRegistry is Ownable{
       }
     }
 
+    /// @notice Convenience method to get account balances for given tokens.
+    /// @param trader Account to check balances for.
+    /// @param assetAddresses Array of token addresses. 
+    /// @return Account balances for each token.
     function getExternalBalances(address trader, address[] memory assetAddresses) public view returns (uint256[] memory) {
         uint256[] memory balances = new uint256[](assetAddresses.length);
         for (uint i = 0; i < assetAddresses.length; i++) {
