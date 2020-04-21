@@ -12,7 +12,7 @@ contract DXTokenRegistry is Ownable{
     event AddToken(uint listId, address token);
     event RemoveToken(uint listId, address token);
 
-    enum TokenStatus {NULL,ACTIVE,REMOVED}
+    enum TokenStatus {NULL,ACTIVE}
 
     struct TCR {
       uint listId;
@@ -44,15 +44,10 @@ contract DXTokenRegistry is Ownable{
     /// @param _tokens Array of token addresses to add.
     function addTokens(uint _listId, address[] memory _tokens) public onlyOwner {
       for (uint32 i = 0; i < _tokens.length; i++) {
-        require(tcrs[_listId].status[_tokens[i]] != TokenStatus.ACTIVE, 'dxTokenRegistry : DUPLICATE_TOKEN');
-        if(tcrs[_listId].status[_tokens[i]] == TokenStatus.REMOVED){
-          tcrs[_listId].status[_tokens[i]] = TokenStatus.ACTIVE;
-          tcrs[_listId].activeTokenCount++;
-        } else {
-          tcrs[_listId].tokens.push(_tokens[i]);
-          tcrs[_listId].status[_tokens[i]] = TokenStatus.ACTIVE;
-          tcrs[_listId].activeTokenCount++;
-        }
+        require(tcrs[_listId].status[_tokens[i]] != TokenStatus.ACTIVE, 'DXTokenRegistry : DUPLICATE_TOKEN');
+        tcrs[_listId].tokens.push(_tokens[i]);
+        tcrs[_listId].status[_tokens[i]] = TokenStatus.ACTIVE;
+        tcrs[_listId].activeTokenCount++;
         emit AddToken(_listId, _tokens[i]);
       }
     } 
@@ -63,8 +58,11 @@ contract DXTokenRegistry is Ownable{
     /// @param _tokens Array of token addresses to deactivate.
     function removeTokens(uint _listId, address[] memory _tokens) public onlyOwner {
       for (uint32 i = 0; i < _tokens.length; i++) {
-        require(tcrs[_listId].status[_tokens[i]] == TokenStatus.ACTIVE, 'dxTokenRegistry : INACTIVE_TOKEN');
-        tcrs[_listId].status[_tokens[i]] = TokenStatus.REMOVED;
+        require(tcrs[_listId].status[_tokens[i]] == TokenStatus.ACTIVE, 'DXTokenRegistry : INACTIVE_TOKEN');
+        tcrs[_listId].status[_tokens[i]] = TokenStatus.NULL;
+        uint tokenIndex = getTokenIndex(_listId,_tokens[i]);
+        tcrs[_listId].tokens[tokenIndex] = tcrs[_listId].tokens[tcrs[_listId].tokens.length - 1];
+        tcrs[_listId].tokens.pop();
         tcrs[_listId].activeTokenCount--;
         emit RemoveToken(_listId, _tokens[i]);
       }
@@ -73,31 +71,18 @@ contract DXTokenRegistry is Ownable{
     /// @notice Get all tokens tracked by a token list, both active and deactivated.
     /// @param _listId ID of list to get tokens from.
     /// @return Array of token addresses tracked by list.
-    function getAllTokens(uint _listId) public view returns(address[] memory){
+    function getTokens(uint _listId) public view returns(address[] memory){
       return tcrs[_listId].tokens;
-    }
-
-    /// @notice Get all active tokens in a token list.
-    /// @param _listId ID of list to get tokens from.
-    /// @return Array of active token addresses in list.
-    function getActiveTokens(uint _listId) public view returns(address[] memory activeTokens){
-      activeTokens = new address[](tcrs[_listId].activeTokenCount);
-      uint32 activeCount = 0;
-      for (uint256 i = 0; i < tcrs[_listId].tokens.length; i++) {
-        if (tcrs[_listId].status[tcrs[_listId].tokens[i]] == TokenStatus.ACTIVE) {
-          activeTokens[activeCount] = tcrs[_listId].tokens[i];
-          activeCount++;
-        }
-      }
     }
 
     /// @notice Get active tokens from a list, within a specified index range.
     /// @param _listId ID of list to get tokens from.
     /// @param _start Start index.
     /// @param _end End index.
-    /// @return Array of active token addresses in index range.
-    function getActiveTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
-      require(_start <= tcrs[_listId].tokens.length && _end < tcrs[_listId].tokens.length, 'dxTokenRegistry: INVALID_RANGE');
+    /// @return tokensRange Array of active token addresses in index range.
+    function getTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
+      require(_start <= tcrs[_listId].tokens.length && _end < tcrs[_listId].tokens.length, 'DXTokenRegistry: INVALID_RANGE');
+      require(_start <= _end, 'DXTokenRegistry: INVALID_INVERTED_RANGE');
       tokensRange = new address[](_end - _start +1);
       uint32 activeCount = 0;
       for (uint256 i = _start; i <= _end; i++) {
@@ -116,10 +101,24 @@ contract DXTokenRegistry is Ownable{
       return tcrs[_listId].status[_token] == TokenStatus.ACTIVE ? true : false;
     }
 
+    /// @notice Returns the array index of a given token address
+    /// @param _listId ID of list to get tokens from.
+    /// @param _token Token address to check.
+    /// @return index position of given token address in list.
+    function getTokenIndex(uint _listId,address _token) internal returns (uint){
+      for (uint256 i = 0; i < tcrs[_listId].tokens.length; i++) {
+        if (tcrs[_listId].tokens[i] == _token) {
+          return i;
+        }
+      }
+    }
+
     /// @notice Convenience method to get ERC20 metadata for given tokens.
     /// @param _tokens Array of token addresses.
-    /// @return Name, symbol, and decimals for each token.
-    function getTokenData(address[] memory _tokens) public view returns (
+    /// @return names for each token.
+    /// @return symbols for each token.
+    /// @return decimals for each token.
+    function getTokensData(address[] memory _tokens) public view returns (
       string[] memory names, string[] memory symbols, uint[] memory decimals
       ) {
       names = new string[](_tokens.length);
@@ -133,15 +132,14 @@ contract DXTokenRegistry is Ownable{
     }
 
     /// @notice Convenience method to get account balances for given tokens.
-    /// @param trader Account to check balances for.
-    /// @param assetAddresses Array of token addresses. 
+    /// @param _trader Account to check balances for.
+    /// @param _assetAddresses Array of token addresses. 
     /// @return Account balances for each token.
-    function getExternalBalances(address trader, address[] memory assetAddresses) public view returns (uint256[] memory) {
-        uint256[] memory balances = new uint256[](assetAddresses.length);
-        for (uint i = 0; i < assetAddresses.length; i++) {
-            balances[i] = ERC20(assetAddresses[i]).balanceOf(trader);
+    function getExternalBalances(address _trader, address[] memory _assetAddresses) public view returns (uint256[] memory) {
+        uint256[] memory balances = new uint256[](_assetAddresses.length);
+        for (uint i = 0; i < _assetAddresses.length; i++) {
+            balances[i] = ERC20(_assetAddresses[i]).balanceOf(_trader);
         }
         return balances;
     }
-
 }
