@@ -1,4 +1,7 @@
 # dxDAO-Token-Registry
+A registry of token lists, curated by the dxDAO.
+
+### Instructions
 `npm install`
 `npx truffle compile`
 `npx truffle test`
