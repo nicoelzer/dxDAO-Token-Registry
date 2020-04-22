@@ -18,7 +18,7 @@
     "truffle-assertions": "^0.9.2"
   },
   "devDependencies": {
-    "@openzeppelin/contracts": "^3.0.0-rc.1",
+    "@openzeppelin/contracts": "^3.0.0",
     "@openzeppelin/test-helpers": "^0.5.5",
     "chai-bignumber": "^3.0.0",
     "verify-on-etherscan": "^1.2.1"

@@ -1,4 +1,4 @@
-pragma solidity >=0.6.0;
+pragma solidity >=0.6.2;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -32,7 +32,6 @@ contract DXTokenRegistry is Ownable{
       listCount++;
       tcrs[listCount].listId =listCount;
       tcrs[listCount].listName =_listName;
-      tcrs[listCount].tokens.push(address(0));
       tcrs[listCount].activeTokenCount = 0;
       emit AddList(listCount,_listName);
       return listCount;
@@ -43,6 +42,7 @@ contract DXTokenRegistry is Ownable{
     /// @param _listId ID of list to add new tokens.
     /// @param _tokens Array of token addresses to add.
     function addTokens(uint _listId, address[] memory _tokens) public onlyOwner {
+      require(_listId <= listCount, 'DXTokenRegistry : INVALID_LIST');
       for (uint32 i = 0; i < _tokens.length; i++) {
         require(tcrs[_listId].status[_tokens[i]] != TokenStatus.ACTIVE, 'DXTokenRegistry : DUPLICATE_TOKEN');
         tcrs[_listId].tokens.push(_tokens[i]);
@@ -52,11 +52,12 @@ contract DXTokenRegistry is Ownable{
       }
     } 
 
-    /// @notice The owner can deactivate token(s) on existing list, by address.
-    /// @dev Attempting to deactivate token addresses which are not active, or not present in the list, will cause revert.
-    /// @param _listId ID of list to deactivate tokens from.
-    /// @param _tokens Array of token addresses to deactivate.
+    /// @notice The owner can remove token(s) on existing list, by address.
+    /// @dev Attempting to remove token addresses which are not active, or not present in the list, will cause revert.
+    /// @param _listId ID of list to remove tokens from.
+    /// @param _tokens Array of token addresses to remove.
     function removeTokens(uint _listId, address[] memory _tokens) public onlyOwner {
+      require(_listId <= listCount, 'DXTokenRegistry : INVALID_LIST');
       for (uint32 i = 0; i < _tokens.length; i++) {
         require(tcrs[_listId].status[_tokens[i]] == TokenStatus.ACTIVE, 'DXTokenRegistry : INACTIVE_TOKEN');
         tcrs[_listId].status[_tokens[i]] = TokenStatus.NULL;
@@ -68,10 +69,11 @@ contract DXTokenRegistry is Ownable{
       }
     }
 
-    /// @notice Get all tokens tracked by a token list, both active and deactivated.
+    /// @notice Get all tokens tracked by a token list
     /// @param _listId ID of list to get tokens from.
     /// @return Array of token addresses tracked by list.
     function getTokens(uint _listId) public view returns(address[] memory){
+      require(_listId <= listCount, 'DXTokenRegistry : INVALID_LIST');
       return tcrs[_listId].tokens;
     }
 
@@ -81,8 +83,9 @@ contract DXTokenRegistry is Ownable{
     /// @param _end End index.
     /// @return tokensRange Array of active token addresses in index range.
     function getTokensRange(uint _listId, uint256 _start, uint256 _end) public view returns(address[] memory tokensRange){
-      require(_start <= tcrs[_listId].tokens.length && _end < tcrs[_listId].tokens.length, 'DXTokenRegistry: INVALID_RANGE');
-      require(_start <= _end, 'DXTokenRegistry: INVALID_INVERTED_RANGE');
+      require(_listId <= listCount, 'DXTokenRegistry : INVALID_LIST');
+      require(_start <= tcrs[_listId].tokens.length && _end < tcrs[_listId].tokens.length, 'DXTokenRegistry : INVALID_RANGE');
+      require(_start <= _end, 'DXTokenRegistry : INVALID_INVERTED_RANGE');
       tokensRange = new address[](_end - _start +1);
       uint32 activeCount = 0;
       for (uint256 i = _start; i <= _end; i++) {
@@ -98,6 +101,7 @@ contract DXTokenRegistry is Ownable{
     /// @param _token Token address to check.
     /// @return Active status of given token address in list.
     function isTokenActive(uint _listId,address _token) public view returns (bool) {
+      require(_listId <= listCount, 'DXTokenRegistry : INVALID_LIST');
       return tcrs[_listId].status[_token] == TokenStatus.ACTIVE ? true : false;
     }
 
