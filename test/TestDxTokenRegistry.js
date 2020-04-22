@@ -30,14 +30,18 @@ contract("dxTokenRegistry", async (accounts) => {
     );
   });
   
-  it("should emit an event for added lists", async function() {
+  it("should allow admins to add lists", async function() {
     __listName = 'testList';
     __listId = 1;
-    let tx = await __contract.addList(__listName, { from: __owner });
 
+    const listCountBefore = await __contract.listCount();
+    let tx = await __contract.addList(__listName, { from: __owner });
     truffleAssert.eventEmitted(tx, 'AddList', (ev) => {
         return ev.listId.toNumber() === __listId && ev.listName === __listName;
     });
+    const listCountAfter = await __contract.listCount();
+    assert.equal(listCountAfter.toNumber(), listCountBefore.toNumber() +1);
+
 
   });
 
@@ -55,9 +59,9 @@ contract("dxTokenRegistry", async (accounts) => {
     __tokenAddresses = [__tokenAddr1,__tokenAddr2];
     __listId = 1;
 
-    assert.isFalse(await __contract.activeToken.call(__listId,__tokenAddr1));
+    assert.isFalse(await __contract.isTokenActive.call(__listId,__tokenAddr1));
     const tx = await __contract.addTokens(__listId, __tokenAddresses, { from: __owner });
-    assert.isTrue(await __contract.activeToken.call(__listId,__tokenAddr1));
+    assert.isTrue(await __contract.isTokenActive.call(__listId,__tokenAddr1));
 
     truffleAssert.eventEmitted(tx, 'AddToken', (ev) => {
       return ev.listId.toNumber() === __listId && ev.token === __tokenAddr1;
@@ -77,7 +81,19 @@ contract("dxTokenRegistry", async (accounts) => {
       __contract.addTokens(__listId, [__tokenAddr3], {
         from: __owner
       }),
-        "dxTokenRegistry : DUPLICATE_TOKEN"
+        "DXTokenRegistry : DUPLICATE_TOKEN"
+    );
+
+  });
+
+  it("should revert invalid listId", async function() {
+    __listId = 50;
+    
+    await truffleAssert.reverts(
+      __contract.addTokens(__listId, [__tokenAddr3], {
+        from: __owner
+      }),
+        "DXTokenRegistry : INVALID_LIST"
     );
 
   });
@@ -96,18 +112,18 @@ contract("dxTokenRegistry", async (accounts) => {
         return ev.listId.toNumber() === __listId && ev.token === __tokenAddr2;
     });
 
-    assert.isFalse(await __contract.activeToken.call(__listId,__tokenAddr2));
+    assert.isFalse(await __contract.isTokenActive.call(__listId,__tokenAddr2));
 
   });
 
-  it("should revert transaction when trying to remove tokens that have already been removed", async function() {
+  it("should revert transaction when trying to remove inactive tokens", async function() {
     __listId = 1;
 
     await truffleAssert.reverts(
       __contract.removeTokens(__listId, [__tokenAddr2], {
         from: __owner
       }),
-        "dxTokenRegistry : INACTIVE_TOKEN"
+        "DXTokenRegistry : INACTIVE_TOKEN"
     );
 
   });
