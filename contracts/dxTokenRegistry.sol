@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @title dxDAO Token Multi-Registry
 /// @notice Maintains multiple token lists, curated by the DAO
 contract DXTokenRegistry is Ownable{
-
+  
     event AddList(uint listId, string listName);
     event AddToken(uint listId, address token);
     event RemoveToken(uint listId, address token);
