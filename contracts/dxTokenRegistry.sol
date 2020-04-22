@@ -63,10 +63,7 @@ contract DXTokenRegistry is Ownable {
     /// @param _listId ID of list to remove tokens from.
     /// @param _tokens Array of token addresses to remove.
     function removeTokens(uint256 _listId, address[] memory _tokens) public onlyOwner {
-      require(
-        _listId <= listCount,
-        'DXTokenRegistry : INVALID_LIST'
-      );
+      require(_listId <= listCount, 'DXTokenRegistry : INVALID_LIST');
       for (uint32 i = 0; i < _tokens.length; i++) {
           require(
             tcrs[_listId].status[_tokens[i]] == TokenStatus.ACTIVE,
