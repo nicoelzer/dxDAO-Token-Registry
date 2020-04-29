@@ -1,6 +1,6 @@
 
 const truffleAssert = require("truffle-assertions");
-const tokenRegistry = artifacts.require("./dxTokenRegistry.sol");
+const tokenRegistry = artifacts.require("DXTokenRegistry");
 
 contract("dxTokenRegistry", async (accounts) => {
     let __contract;

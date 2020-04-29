@@ -1,5 +1,5 @@
-var DXTokenRegistry = artifacts.require("./dxTokenRegistry.sol");
+var DXTokenRegistry = artifacts.require("DXTokenRegistry");
 
 module.exports = function(deployer){
   deployer.deploy(DXTokenRegistry);
-}
+};
