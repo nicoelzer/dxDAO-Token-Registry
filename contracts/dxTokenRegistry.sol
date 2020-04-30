@@ -123,7 +123,7 @@ contract DXTokenRegistry is Ownable {
     /// @param _listId ID of list to get tokens from.
     /// @param _token Token address to check.
     /// @return index position of given token address in list.
-    function getTokenIndex(uint256 _listId, address _token) internal returns (uint256) {
+    function getTokenIndex(uint256 _listId, address _token) internal view returns (uint256) {
         for (uint256 i = 0; i < tcrs[_listId].tokens.length; i++) {
             if (tcrs[_listId].tokens[i] == _token) {
                 return i;
