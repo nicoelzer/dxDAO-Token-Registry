@@ -1,8 +1,15 @@
 {
-  "name": "tokenRegistry",
-  "version": "1.0.0",
-  "description": "",
+  "name": "dxdao-token-registry",
+  "version": "0.1.0",
+  "description": "A registry of token lists, curated by the dxDAO.",
   "main": "truffle-config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nicoelzer/dxDAO-Token-Registry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nicoelzer/dxDAO-Token-Registry/issues"
+  },
   "directories": {
     "test": "test"
   },
@@ -12,7 +19,7 @@
     "prettier:solidity": "./node_modules/.bin/prettier --write contracts/**/*.sol"
   },
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0",
   "dependencies": {
     "@openzeppelin/cli": "^2.8.1",
     "@truffle/hdwallet-provider": "^1.0.33",
