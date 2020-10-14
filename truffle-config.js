@@ -18,11 +18,11 @@
  *
  */
 
+require('dotenv').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
-const infuraKey = "fj4jll3k.....";
-//
-const fs = require('fs');
-const mnemonic = fs.readFileSync(".secret").toString().trim();
+
+mnemonic = process.env.KEY_MNEMONIC;
+infuraKey = process.env.KEY_INFURA_API_KEY;
 
 module.exports = {
   /**
@@ -48,11 +48,22 @@ module.exports = {
       network_id: "*",       // Any network (default: none)
     },
 
-    live: {
+     live: {
       provider: () => new HDWalletProvider(mnemonic, `https://mainnet.infura.io/v3/${infuraKey}`),
       network_id: 1,
       gas: 7000000,
       gasPrice: 8000000000,
+     },
+
+     xdai: {
+      provider: function() {
+            return new HDWalletProvider(
+              mnemonic,
+           "https://dai.poa.network")
+      },
+      network_id: 100,
+      gas: 5000000,
+      gasPrice: 2000000000
      },
 
      rinkeby: {

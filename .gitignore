@@ -1,4 +1,5 @@
 /node_modules
 /build
-
-.secret
+.env
+yarn.lock
+package-lock.json
